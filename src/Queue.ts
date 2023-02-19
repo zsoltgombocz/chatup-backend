@@ -1,13 +1,18 @@
+import { UserStatusEnum } from "./enums";
 import { User } from "./User";
 
-export interface QueueInterface {
-    addToQueue: (userId: string, cb?: Function | undefined) => void,
-    removeFromQueue: (userId: string, cb?: Function | undefined) => void,
+export type removeFromQueue = {
+    (user: string, cb?: Function | undefined): void;
+    (user: User, cb?: Function | undefined): void;
 }
 
+export interface QueueInterface {
+    addToQueue: (user: User, cb?: Function | undefined) => void,
+    removeFromQueue: removeFromQueue,
+}
 export class Queue implements QueueInterface {
     private static instance: Queue;
-    private static queue: string[] = [];
+    private static queue: User[] = [];
 
     private constructor() { }
 
@@ -19,22 +24,38 @@ export class Queue implements QueueInterface {
         return Queue.instance;
     }
 
-    addToQueue = (userId: string, cb: Function | undefined = undefined): void => {
-        if (Queue.queue.includes(userId)) return;
+    static inQueue = (user: User | string): (User | null) => {
+        let inQueueUser: User | null;
+        if (typeof user === "string") {
+            inQueueUser = Queue.queue.filter(u => u.getId() === user)?.[0] || null;
+        } else {
+            inQueueUser = Queue.queue.filter(u => u.getId() === user.getId())?.[0] || null;
+        }
 
-        Queue.queue.push(userId);
-
-        cb?.();
+        return inQueueUser;
     }
 
-    removeFromQueue = (userId: string, cb: Function | undefined = undefined): void => {
-        if (!Queue.queue.includes(userId)) return;
+    addToQueue = (user: User, cb: Function | undefined = undefined): void => {
+        if (Queue.inQueue(user) !== null) return;
 
-        const filteredQueue = Queue.queue.filter(id => id !== userId);
+        Queue.queue.push(user);
+        user.setStatus(UserStatusEnum.IN_QUEUE);
+        console.log('Added to queue, current: ', Queue.queue.length);
+
+        cb?.();
+    };
+
+
+    removeFromQueue = (user: any, cb: Function | undefined = undefined): void => {
+        const inQueueUser: User | null = Queue.inQueue(user);
+        if (inQueueUser === null) return;
+
+        const filteredQueue = Queue.queue.filter(u => u.getId() !== inQueueUser.getId());
         Queue.queue = filteredQueue;
-
+        inQueueUser?.setStatus(UserStatusEnum.IDLE);
+        console.log('Removed from queue, current: ', Queue.queue.length);
         cb?.();
     }
 
-    static getQueue = (): string[] => Queue.queue;
+    static getQueue = (): User[] => Queue.queue;
 }
