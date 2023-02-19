@@ -45,6 +45,7 @@ export class User implements UserInterface {
             console.log(`${socket.id} disconnected: ${reason}`);
             this.userDisconnectCallbackFC?.();
             this.setStatus(UserStatusEnum.DISCONNECTED);
+            //store disconnect time, and let the cleanup delete from the users list            
         });
     }
 
