@@ -15,11 +15,11 @@ app.get("/", (req: any, res: any) => {
     res.json({ message: 'ChatUp backend server. Version: 1.0.0' });
 });
 
-const sokcetIOServer: ServerInterface = new SocketServer(http);
+const socket: ServerInterface = new SocketServer(http);
 
-instrument(sokcetIOServer.server, {
+instrument(socket.server, {
     auth: false,
-    mode: "development",
+    mode: "production",
 });
 
 http.listen(PORT, function () {
