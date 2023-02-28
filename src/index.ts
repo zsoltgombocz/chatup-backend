@@ -18,8 +18,12 @@ app.get("/", (req: any, res: any) => {
 const socket: ServerInterface = new SocketServer(http);
 
 instrument(socket.server, {
-    auth: false,
-    mode: "production",
+    auth: {
+        type: "basic",
+        username: process.env.ADMIN_NAME,
+        password: process.env.ADMIN_PW
+    },
+    mode: "development",
 });
 
 http.listen(PORT, function () {
