@@ -26,7 +26,7 @@ export class SocketServer implements ServerInterface {
     constructor(http: any) {
         this.server = new Server(http, {
             cors: {
-                origin: process.env.ENV === 'development' ? '*' : process.env.TRUSTED_ORIGIN
+                origin: process.env.ENV === 'development' ? '*' : [process.env.FRONTEND_ORIGIN, process.env.SOCKET_ADMIN_ORIGIN]
             }
         });
 
