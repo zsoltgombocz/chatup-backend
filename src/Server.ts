@@ -26,7 +26,7 @@ export class SocketServer implements ServerInterface {
     constructor(http: any) {
         this.server = new Server(http, {
             cors: {
-                origin: "https://socket-admin.chatup.hu",
+                origin: process.env.ADMIN_ORIGIN,
                 methods: ["GET", "POST"],
                 credentials: true
             }
