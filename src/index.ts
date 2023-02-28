@@ -4,8 +4,10 @@ import { instrument } from "@socket.io/admin-ui";
 
 require('dotenv').config();
 
+const PORT = process.env.PORT || 3000;
+
 const app = express();
-app.set("port", process.env.PORT || 3000);
+app.set("port", PORT);
 
 let http = require("http").Server(app);
 
@@ -20,6 +22,6 @@ instrument(sokcetIOServer.server, {
     mode: "development",
 });
 
-http.listen(3000, function () {
+http.listen(PORT, function () {
     console.log("listening on *:3000");
 });
