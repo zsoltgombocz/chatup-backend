@@ -28,6 +28,7 @@ export class SocketServer implements ServerInterface {
             cors: {
                 origin: "https://socket-admin.chatup.hu",
                 methods: ["GET", "POST"],
+                credentials: true
             }
         });
 
