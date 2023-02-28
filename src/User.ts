@@ -9,24 +9,35 @@ export interface UserDataInterface {
     interests: string[],
 }
 
+interface timeInterface {
+    join: number | null,
+    leave: number | null,
+}
+
 export interface UserInterface {
     id: string,
     socket: any,
     status: UserStatusEnum,
     userDisconnectCallbackFC: Function | undefined,
     userData: UserDataInterface | null,
+    time: timeInterface,
+    disconnectReason: string | undefined,
 
     //GETTERS
     getSocket(): any,
     getId(): string,
+    getTime(): timeInterface,
+    getCurrentStatus(): UserStatusEnum,
 
     //SETTERS
     setSocket(socket: any): void,
     setStatus(status: UserStatusEnum): void,
     updateUserData(data: UserDataInterface): void
+    setTime(join: number | null | undefined, leave: number | null | undefined): void
 
     //FUNQ
     isPairableWith(user: User, strict?: boolean): boolean
+    disconnect(time: number, reason?: string): void
 }
 
 export class User implements UserInterface {
@@ -35,18 +46,21 @@ export class User implements UserInterface {
     status = UserStatusEnum.IDLE;
     userDisconnectCallbackFC = undefined;
     userData = null;
+    time = {
+        join: null,
+        leave: null,
+    };
+    disconnectReason = undefined;
 
-    constructor(id, socket: any, userDisconnectFC: Function | undefined, deleteUser: Function | undefined) {
+    constructor(id, socket: any) {
         this.socket = socket;
         this.id = id;
-        this.userDisconnectCallbackFC = userDisconnectFC;
+        this.time.join = socket.handshake.issued;
+    }
 
-        socket.on("disconnect", (reason) => {
-            console.log(`${socket.id} disconnected: ${reason}`);
-            this.userDisconnectCallbackFC?.();
-            this.setStatus(UserStatusEnum.DISCONNECTED);
-            //store disconnect time, and let the cleanup delete from the users list            
-        });
+    setTime = (join: number | null | undefined, leave: number | null | undefined): void => {
+        this.time.join = join !== undefined ? join : this.time.join;
+        this.time.leave = leave !== undefined ? leave : this.time.leave;
     }
 
     getSocket = (): any => {
@@ -55,6 +69,14 @@ export class User implements UserInterface {
 
     getId = (): string => {
         return this.id;
+    }
+
+    getTime = (): timeInterface => {
+        return this.time;
+    }
+
+    getCurrentStatus = (): UserStatusEnum => {
+        return this.status;
     }
 
     setSocket = (socket: any): void => {
@@ -114,5 +136,13 @@ export class User implements UserInterface {
         if (!location) return false;
 
         return true;
+    }
+
+    //When user disconnected call this function to manage user leftover object
+    disconnect = (time: number, reason?: string) => {
+        this.time.leave = time;
+        this.disconnectReason = reason ?? 'Unknown';
+        console.log(`${this.id} disconnected: ${reason}`);
+        this.status = UserStatusEnum.DISCONNECTED;
     }
 }
