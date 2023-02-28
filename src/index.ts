@@ -1,6 +1,6 @@
 import express from "express";
-import { SocketServer } from "./Server";
-import { User } from "./User";
+import { ServerInterface, SocketServer } from "./Server";
+import { instrument } from "@socket.io/admin-ui";
 
 require('dotenv').config();
 
@@ -13,7 +13,12 @@ app.get("/", (req: any, res: any) => {
     res.json({ message: 'ChatUp backend server. Version: 1.0.0' });
 });
 
-new SocketServer(http);
+const sokcetIOServer: ServerInterface = new SocketServer(http);
+
+instrument(sokcetIOServer.server, {
+    auth: false,
+    mode: "development",
+});
 
 http.listen(3000, function () {
     console.log("listening on *:3000");
