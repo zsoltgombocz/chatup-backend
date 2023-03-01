@@ -41,10 +41,9 @@ export class Queue implements QueueInterface {
         Queue.queue.push(user);
         user.setStatus(UserStatusEnum.IN_QUEUE);
         console.log('Added to queue, current: ', Queue.queue.length);
-
+        this.searchForPartner(user);
         cb?.();
     };
-
 
     removeFromQueue = (user: any, cb: Function | undefined = undefined): void => {
         const inQueueUser: User | null = Queue.inQueue(user);
@@ -55,6 +54,14 @@ export class Queue implements QueueInterface {
         inQueueUser?.setStatus(UserStatusEnum.IDLE);
         console.log('Removed from queue, current: ', Queue.queue.length);
         cb?.();
+    }
+
+    searchForPartner = (user: User): User => {
+        const queueUsers = Queue.queue.filter(u => u.id !== user.getId())
+        queueUsers.map((u: User) => {
+            const pairable = user.isPairableWith(u);
+            console.log(pairable);
+        });
     }
 
     static getQueue = (): User[] => Queue.queue;
