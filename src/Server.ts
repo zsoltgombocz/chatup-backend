@@ -33,7 +33,8 @@ export class SocketServer implements ServerInterface {
         });
 
         this.server.on('connection', this.onConnect);
-        if (process.env.ENABLE_CLEANUP) this.#startInactiveUserCleanupJob();
+        const enabledCleanup = parseInt(process.env.ENABLE_CLEANUP) || 0;
+        if (enabledCleanup) this.#startInactiveUserCleanupJob();
     }
 
     #startInactiveUserCleanupJob = (minutes: number = 5): void => {
