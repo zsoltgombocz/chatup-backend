@@ -56,7 +56,7 @@ export class Queue implements QueueInterface {
         cb?.();
     }
 
-    searchForPartner = (user: User): User => {
+    searchForPartner = (user: User): any => {
         const queueUsers = Queue.queue.filter(u => u.id !== user.getId())
         queueUsers.map((u: User) => {
             const pairable = user.isPairableWith(u);
