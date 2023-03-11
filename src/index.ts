@@ -1,6 +1,8 @@
 import express from "express";
 import { ServerInterface, SocketServer } from "./Server";
 import { instrument } from "@socket.io/admin-ui";
+import chatRoutes from "./routes/chatRoutes";
+import bodyParser from "body-parser";
 
 require('dotenv').config();
 
@@ -10,6 +12,10 @@ const app = express();
 app.set("port", PORT);
 
 let http = require("http").Server(app);
+
+app.use(bodyParser.json());
+
+app.use('/chat', chatRoutes);
 
 app.get("/", (req: any, res: any) => {
     res.json({ message: 'ChatUp backend server. Version: 1.0.0' });
