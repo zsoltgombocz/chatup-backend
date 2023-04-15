@@ -7,6 +7,7 @@ import { isValidToken } from './utils/isValidToken';
 import { UserStatusEnum } from './enums';
 
 import { CronJob } from 'cron';
+import { Room } from './Room';
 
 export interface ServerInterface {
     server: any,
@@ -97,15 +98,42 @@ export class SocketServer implements ServerInterface {
         let user = new User(token, client);
         this.listenUserInteraction(user, client);
         client.emit('userAuthDone', token);
-        console.log(Date.now());
 
         this.addToConnectedUsers(user);
+
+        if (user.getRoomId() !== null) {
+            user.getSocket().emit('roomChanged', user.getRoomId());
+        }
+
+
     }
 
     listenUserInteraction = (user: User, client): void => {
         client.on('updateData', (data: UserDataInterface) => user.updateUserData(data));
-        client.on('startSearch', () => this.queue.addToQueue(user));
-        client.on('cancelSearch', () => this.queue.removeFromQueue(user));
+        client.on('startSearch', () => {
+            this.queue.addToQueue(user, () => {
+                this.queue.searchForPartner(user, (partner) => {
+                    console.log('Found partner: ', partner.getId());
+                    this.queue.removeFromQueue(user);
+                    this.queue.removeFromQueue(partner);
+                    const roomId = Room.getInstance().generateRoom();
+                    console.log('Generated room: ', roomId);
+
+                    [user, partner].forEach((u: User) => {
+                        Room.getInstance().addUserToRoom(u, roomId, () => {
+                            console.log('Added user to room: ', u.getId());
+                            u.getSocket().emit('roomChanged', roomId);
+                        });
+                    })
+                });
+
+            });
+            this.server.emit('queuePopulation', Queue.getQueue().length);
+        });
+        client.on('cancelSearch', () => {
+            this.queue.removeFromQueue(user);
+            this.server.emit('queuePopulation', Queue.getQueue().length);
+        });
         client.on("disconnect", (reason) => {
             user.disconnect(Date.now(), reason);
             this.queue.removeFromQueue(user.getId());

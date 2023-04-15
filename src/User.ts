@@ -22,18 +22,21 @@ export interface UserInterface {
     userData: UserDataInterface | null,
     time: timeInterface,
     disconnectReason: string | undefined,
+    roomId: string | null,
 
     //GETTERS
     getSocket(): any,
     getId(): string,
     getTime(): timeInterface,
     getCurrentStatus(): UserStatusEnum,
+    getRoomId(): string | null,
 
     //SETTERS
     setSocket(socket: any): void,
     setStatus(status: UserStatusEnum): void,
     updateUserData(data: UserDataInterface): void
     setTime(join: number | null | undefined, leave: number | null | undefined): void
+    setRoomId(roomId: string | null): void
 
     //FUNQ
     isPairableWith(user: User, strict?: boolean): boolean
@@ -51,6 +54,7 @@ export class User implements UserInterface {
         leave: null,
     };
     disconnectReason = undefined;
+    roomId = null;
 
     constructor(id, socket: any) {
         this.socket = socket;
@@ -79,6 +83,10 @@ export class User implements UserInterface {
         return this.status;
     }
 
+    getRoomId = (): string | null => {
+        return this.roomId;
+    }
+
     setSocket = (socket: any): void => {
         this.socket = socket;
     }
@@ -95,14 +103,21 @@ export class User implements UserInterface {
     }
 
     updateUserData = (data: UserDataInterface) => {
+        console.log(this.id, data);
+
         this.userData = data;
+    }
+
+    setRoomId(roomId: string | null): void {
+        this.roomId = roomId;
     }
 
     //Checks if partners own and prefered gender match with user's
     //Returns true if matchable
     #genderCheck(partnerOwn: Gender, partnerPreference: Gender): boolean {
         if (this.userData.ownGender !== partnerPreference && partnerPreference !== Gender.ALL) return false;
-        if (this.userData.partnerGender !== partnerOwn && this.userData.partnerGender === Gender.ALL) return false;
+
+        if (this.userData.partnerGender !== partnerOwn && this.userData.partnerGender !== Gender.ALL) return false;
 
         return true;
     }
