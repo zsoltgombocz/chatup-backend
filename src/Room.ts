@@ -42,6 +42,8 @@ export class Room implements RoomInterface {
         const room = this.getRoomById(roomId);
         if (room === undefined && room.users.length < 2) return;
 
+        this.removeUserFromRoom(user);
+
         user.setRoomId(roomId);
         room.users.push(user.getId());
         cb?.();
@@ -58,5 +60,20 @@ export class Room implements RoomInterface {
 
     getRoomById = (roomId: string): SingleRoomInterface | undefined => {
         return Room.rooms.find(room => room.id === roomId);
+    }
+
+    static deleteEmptyRooms = (): void => {
+        const nonEmptyRooms = Room.rooms.filter(room => room.users.length !== 0);
+        console.log(`Deleted ${Room.rooms.length - nonEmptyRooms.length} rooms!`);
+        Room.rooms = nonEmptyRooms;
+    }
+
+    destroyRoom = (roomId: string, cleanup: Function | undefined): void => {
+        const room: SingleRoomInterface | undefined = this.getRoomById(roomId);
+        if (room === undefined) return;
+
+        room.users.forEach(userId => {
+            cleanup?.(userId);
+        });
     }
 }
