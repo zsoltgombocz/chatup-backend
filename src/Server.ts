@@ -16,13 +16,14 @@ export interface ServerInterface {
     addToConnectedUsers(user: User): void,
     removeFromConnectedUsers(id: string): void,
     listenUserInteraction(user: User, client): void,
+    recoverUser(token: string): User | undefined
 }
 
 export class SocketServer implements ServerInterface {
     server = null;
     queue = Queue.getInstance();
     connectedUsers = [];
-    #inactiveUserCleanup: CronJob;
+    #cleanup: CronJob;
 
     constructor(http: any) {
         this.server = new Server(http, {
@@ -35,20 +36,21 @@ export class SocketServer implements ServerInterface {
 
         this.server.on('connection', this.onConnect);
         const enabledCleanup = parseInt(process.env.ENABLE_CLEANUP) || 0;
-        if (enabledCleanup) this.#startInactiveUserCleanupJob();
+        if (enabledCleanup) this.#startCleanup(2);
     }
 
-    #startInactiveUserCleanupJob = (minutes: number = 5): void => {
-        this.#inactiveUserCleanup = new CronJob(`*/${minutes} * * * *`, async () => {
+    #startCleanup = (minutes: number = 5): void => {
+        this.#cleanup = new CronJob(`*/${minutes} * * * *`, async () => {
             try {
-                this.#deleteDisconnectedUsers(15);
+                this.#deleteDisconnectedUsers(1);
+                Room.deleteEmptyRooms();
             } catch (e) {
                 console.error(e);
             }
         });
 
-        if (!this.#inactiveUserCleanup.running) {
-            this.#inactiveUserCleanup.start();
+        if (!this.#cleanup.running) {
+            this.#cleanup.start();
         }
     }
 
@@ -56,8 +58,7 @@ export class SocketServer implements ServerInterface {
     //? If the user disconnected and on cronjob run he/she/it reached the 'minutes'
     //? variable (def.: 5 minutes), will be filtered out a.k.a delete the whole User object => no recovering
     #deleteDisconnectedUsers = (minutes: number = 5): void => {
-        console.log('Inactive user cleanup:');
-        if (this.connectedUsers.length === 0) return console.log('No cleanup need, users = 0');
+        if (this.connectedUsers.length === 0) return console.log('No user deleted because no user connected!');
 
         const expiredUserList = this.connectedUsers.filter((user: User) => {
             if (user.getCurrentStatus() !== UserStatusEnum.DISCONNECTED) return false;
@@ -66,8 +67,24 @@ export class SocketServer implements ServerInterface {
 
             return elapsedTimeInMinutes >= minutes;
         });
+        if (expiredUserList.length > 0) {
+            console.log(`Deleting ${expiredUserList.length} inactive user!`);
+            expiredUserList.forEach((user: User) => {
+                if (user.getRoomId() !== null) {
+                    const self = this;
+                    const cleanupFC = (userId: string) => {
+                        const usr = self.getUserById(userId);
+                        if (usr === undefined) return;
 
-        expiredUserList.forEach((user: User) => this.removeFromConnectedUsers(user.id));
+                        Room.getInstance().removeUserFromRoom(usr);
+                    }
+
+                    Room.getInstance().destroyRoom(user.getRoomId(), cleanupFC);
+                }
+
+                this.removeFromConnectedUsers(user.id);
+            });
+        }
     }
 
     addToConnectedUsers = (user: User): void => {
@@ -75,7 +92,6 @@ export class SocketServer implements ServerInterface {
 
         if (!exists) this.connectedUsers.push(user);
 
-        console.log('Connected user, current: ' + this.connectedUsers.length);
         this.server.emit('userNumberChanged', this.connectedUsers.length);
     }
 
@@ -83,7 +99,6 @@ export class SocketServer implements ServerInterface {
         const filteredConnectedUsers = this.connectedUsers.filter((connectedUser: User) => connectedUser.getId() !== id);
 
         this.connectedUsers = filteredConnectedUsers;
-        console.log('Disconnected user, current: ' + this.connectedUsers.length);
         this.server.emit('userNumberChanged', this.connectedUsers.length);
     }
 
@@ -93,19 +108,33 @@ export class SocketServer implements ServerInterface {
         return isValidToken(token) ? token : undefined;
     }
 
+    getUserById = (userId: string): User | undefined => {
+        return this.connectedUsers.find(connectedUser => connectedUser.id === userId);
+    }
+
+    recoverUser = (token: string): User | undefined => {
+        const user: User | undefined = this.getUserById(token);
+        console.log(this.connectedUsers.map((usr: User) => usr.getId()));
+        console.log('recover', user);
+        user?.recover();
+        return user;
+    }
+
     onConnect = (client): void => {
         const token: string | undefined = this.getAuthToken(client) || uuidv4();
-        let user = new User(token, client);
+        console.log('somebody connected with', token);
+        let user = this.recoverUser(token) || new User(token, client);
+        user.setSocket(client);
+
         this.listenUserInteraction(user, client);
         client.emit('userAuthDone', token);
 
         this.addToConnectedUsers(user);
 
         if (user.getRoomId() !== null) {
-            user.getSocket().emit('roomChanged', user.getRoomId());
+            console.log('kikuldeni');
+            user.getSocket().emit('userRoomIdChanged', user.getRoomId());
         }
-
-
     }
 
     listenUserInteraction = (user: User, client): void => {
@@ -121,10 +150,14 @@ export class SocketServer implements ServerInterface {
 
                     [user, partner].forEach((u: User) => {
                         Room.getInstance().addUserToRoom(u, roomId, () => {
+                            u.setStatus(UserStatusEnum.IN_CHAT);
+                            u.getSocket().emit('partnerFound', true);
                             console.log('Added user to room: ', u.getId());
-                            u.getSocket().emit('roomChanged', roomId);
+
                         });
-                    })
+                    });
+
+
                 });
 
             });
@@ -137,6 +170,15 @@ export class SocketServer implements ServerInterface {
         client.on("disconnect", (reason) => {
             user.disconnect(Date.now(), reason);
             this.queue.removeFromQueue(user.getId());
+            if (user.getRoomId() !== null) {
+                const room = Room.getInstance().getRoomById(user.getRoomId());
+                const partnerIdFromRoom = room.users.find(usr => usr !== user.getId());
+                const partner: User | undefined = this.connectedUsers.find(usr => usr.getId() === partnerIdFromRoom);
+                if (partner !== undefined && partner.getCurrentStatus() === UserStatusEnum.DISCONNECTED) {
+                    Room.getInstance().removeUserFromRoom(user);
+                    Room.getInstance().removeUserFromRoom(partner);
+                }
+            }
         });
     }
 }
