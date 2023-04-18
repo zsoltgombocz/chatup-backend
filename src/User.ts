@@ -41,6 +41,7 @@ export interface UserInterface {
     //FUNQ
     isPairableWith(user: User, strict?: boolean): boolean
     disconnect(time: number, reason?: string): void
+    recover(): void
 }
 
 export class User implements UserInterface {
@@ -50,7 +51,7 @@ export class User implements UserInterface {
     userDisconnectCallbackFC = undefined;
     userData = null;
     time = {
-        join: null,
+        join: Date.now(),
         leave: null,
     };
     disconnectReason = undefined;
@@ -103,12 +104,12 @@ export class User implements UserInterface {
     }
 
     updateUserData = (data: UserDataInterface) => {
-        console.log(this.id, data);
-
+        this.socket.emit('userDataChanged', data);
         this.userData = data;
     }
 
     setRoomId(roomId: string | null): void {
+        this.socket.emit('userRoomIdChanged', roomId);
         this.roomId = roomId;
     }
 
@@ -157,7 +158,15 @@ export class User implements UserInterface {
     disconnect = (time: number, reason?: string) => {
         this.time.leave = time;
         this.disconnectReason = reason ?? 'Unknown';
-        console.log(`${this.id} disconnected: ${reason}`);
         this.status = UserStatusEnum.DISCONNECTED;
+        console.log('user disconnected', this.id);
+
+    }
+
+    recover = () => {
+        this.time.join = Date.now();
+        this.time.leave = null;
+        this.disconnectReason = undefined;
+        this.status = UserStatusEnum.IDLE;
     }
 }
