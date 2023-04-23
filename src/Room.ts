@@ -8,7 +8,7 @@ export interface RoomInterface {
     getRoomById: (roomId: string) => SingleRoomInterface | undefined,
 }
 
-interface SingleRoomInterface {
+export interface SingleRoomInterface {
     id: string,
     users: string[]
 }
@@ -40,12 +40,12 @@ export class Room implements RoomInterface {
 
     addUserToRoom = (user: User, roomId: string, cb?: Function | undefined): void => {
         const room = this.getRoomById(roomId);
-        if (room === undefined && room.users.length < 2) return;
+        if (room === undefined && room?.users?.length < 2) return;
 
         this.removeUserFromRoom(user);
 
-        user.setRoomId(roomId);
-        room.users.push(user.getId());
+        user.setCurrentRoomId(roomId);
+        room?.users?.push(user.getId());
         cb?.();
     }
 
@@ -53,7 +53,7 @@ export class Room implements RoomInterface {
         const room = this.getRoomById(roomId) || Room.rooms.find(room => room.users.includes(user.getId()));
         if (room === undefined) return;
 
-        user.setRoomId(null);
+        user.setCurrentRoomId(null);
         room.users = room.users.filter(u => u !== user.getId());
         cb?.();
     }

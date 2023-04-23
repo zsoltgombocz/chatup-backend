@@ -14,6 +14,11 @@ interface timeInterface {
     leave: number | null,
 }
 
+interface roomIdInterface {
+    current: string | null,
+    last: string | null,
+}
+
 export interface UserInterface {
     id: string,
     socket: any,
@@ -22,21 +27,22 @@ export interface UserInterface {
     userData: UserDataInterface | null,
     time: timeInterface,
     disconnectReason: string | undefined,
-    roomId: string | null,
+    roomId: roomIdInterface,
 
     //GETTERS
     getSocket(): any,
     getId(): string,
     getTime(): timeInterface,
     getCurrentStatus(): UserStatusEnum,
-    getRoomId(): string | null,
+    getRoomId(): roomIdInterface,
 
     //SETTERS
     setSocket(socket: any): void,
     setStatus(status: UserStatusEnum): void,
     updateUserData(data: UserDataInterface): void
     setTime(join: number | null | undefined, leave: number | null | undefined): void
-    setRoomId(roomId: string | null): void
+    setCurrentRoomId(roomId: string | null): void
+    setLastRoomId(roomId: string | null): void
 
     //FUNQ
     isPairableWith(user: User, strict?: boolean): boolean
@@ -55,7 +61,10 @@ export class User implements UserInterface {
         leave: null,
     };
     disconnectReason = undefined;
-    roomId = null;
+    roomId = {
+        current: null,
+        last: null,
+    };
 
     constructor(id, socket: any) {
         this.socket = socket;
@@ -84,7 +93,7 @@ export class User implements UserInterface {
         return this.status;
     }
 
-    getRoomId = (): string | null => {
+    getRoomId = (): roomIdInterface => {
         return this.roomId;
     }
 
@@ -108,9 +117,15 @@ export class User implements UserInterface {
         this.userData = data;
     }
 
-    setRoomId(roomId: string | null): void {
+    setCurrentRoomId(roomId: string | null): void {
         this.socket.emit('userRoomIdChanged', roomId);
-        this.roomId = roomId;
+        this.setLastRoomId(this.roomId.current);
+
+        this.roomId.current = roomId;
+    }
+
+    setLastRoomId(roomId: string | null): void {
+        this.roomId.last = roomId;
     }
 
     //Checks if partners own and prefered gender match with user's
