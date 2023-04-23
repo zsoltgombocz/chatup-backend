@@ -7,7 +7,7 @@ import { isValidToken } from './utils/isValidToken';
 import { UserStatusEnum } from './enums';
 
 import { CronJob } from 'cron';
-import { Room } from './Room';
+import { Room, SingleRoomInterface } from './Room';
 
 export interface ServerInterface {
     server: any,
@@ -79,7 +79,7 @@ export class SocketServer implements ServerInterface {
                         Room.getInstance().removeUserFromRoom(usr);
                     }
 
-                    Room.getInstance().destroyRoom(user.getRoomId(), cleanupFC);
+                    Room.getInstance().destroyRoom(user.getRoomId().last, cleanupFC);
                 }
 
                 this.removeFromConnectedUsers(user.id);
@@ -114,8 +114,6 @@ export class SocketServer implements ServerInterface {
 
     recoverUser = (token: string): User | undefined => {
         const user: User | undefined = this.getUserById(token);
-        console.log(this.connectedUsers.map((usr: User) => usr.getId()));
-        console.log('recover', user);
         user?.recover();
         return user;
     }
@@ -132,7 +130,7 @@ export class SocketServer implements ServerInterface {
         this.addToConnectedUsers(user);
 
         if (user.getRoomId() !== null) {
-            console.log('kikuldeni');
+            Room.getInstance().addUserToRoom(user, user.getRoomId().last);
             user.getSocket().emit('userRoomIdChanged', user.getRoomId());
         }
     }
@@ -153,13 +151,9 @@ export class SocketServer implements ServerInterface {
                             u.setStatus(UserStatusEnum.IN_CHAT);
                             u.getSocket().emit('partnerFound', true);
                             console.log('Added user to room: ', u.getId());
-
                         });
                     });
-
-
                 });
-
             });
             this.server.emit('queuePopulation', Queue.getQueue().length);
         });
@@ -171,7 +165,9 @@ export class SocketServer implements ServerInterface {
             user.disconnect(Date.now(), reason);
             this.queue.removeFromQueue(user.getId());
             if (user.getRoomId() !== null) {
-                const room = Room.getInstance().getRoomById(user.getRoomId());
+                const room: SingleRoomInterface | undefined = Room.getInstance().getRoomById(user.getRoomId().current);
+                if (room === undefined) return;
+
                 const partnerIdFromRoom = room.users.find(usr => usr !== user.getId());
                 const partner: User | undefined = this.connectedUsers.find(usr => usr.getId() === partnerIdFromRoom);
                 if (partner !== undefined && partner.getCurrentStatus() === UserStatusEnum.DISCONNECTED) {
@@ -180,5 +176,18 @@ export class SocketServer implements ServerInterface {
                 }
             }
         });
+
+        client.on('leavedChat', () => {
+            const room: SingleRoomInterface | undefined = Room.getInstance().getRoomById(user.getRoomId().current);
+            const partner: User = this.getUserById(room?.users.find(usr => usr !== user.getId()));
+
+            if (room === undefined || partner === undefined) {
+                console.log('leavedChat - UNDEFINED ROOM | UNDEFINED PARTNER');
+                return;
+            }
+            partner.getSocket().emit('partnerLeavedChat');
+            user.setStatus(UserStatusEnum.IDLE);
+            Room.getInstance().removeUserFromRoom(user);
+        })
     }
 }
