@@ -128,11 +128,6 @@ export class SocketServer implements ServerInterface {
         client.emit('userAuthDone', token);
 
         this.addToConnectedUsers(user);
-
-        if (user.getRoomId() !== null) {
-            Room.getInstance().addUserToRoom(user, user.getRoomId().last);
-            user.getSocket().emit('userRoomIdChanged', user.getRoomId());
-        }
     }
 
     listenUserInteraction = (user: User, client): void => {
