@@ -84,6 +84,9 @@ export class SocketServer implements ServerInterface {
 
                 this.removeFromConnectedUsers(user.id);
             });
+
+            console.log('Current user list:');
+            console.log(this.connectedUsers);
         }
     }
 
@@ -171,8 +174,16 @@ export class SocketServer implements ServerInterface {
                 }
             }
         });
+        client.on("validateChat", ({ roomId, token }, callback: Function | undefined) => {
+            const user: User = this.getUserById(token);
+            const valid: boolean = Room.getInstance().isUserInRoom(user, roomId);
 
-        client.on('leavedChat', () => {
+            callback?.({
+                status: valid
+            });
+        });
+
+        /*client.on('leavedChat', () => {
             const room: SingleRoomInterface | undefined = Room.getInstance().getRoomById(user.getRoomId().current);
             const partner: User = this.getUserById(room?.users.find(usr => usr !== user.getId()));
 
@@ -183,6 +194,6 @@ export class SocketServer implements ServerInterface {
             partner.getSocket().emit('partnerLeavedChat');
             user.setStatus(UserStatusEnum.IDLE);
             Room.getInstance().removeUserFromRoom(user);
-        })
+        })*/
     }
 }
