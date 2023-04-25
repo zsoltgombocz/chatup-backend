@@ -76,4 +76,11 @@ export class Room implements RoomInterface {
             cleanup?.(userId);
         });
     }
+
+    isUserInRoom = (user: User, roomId: string): boolean => {
+        const room: SingleRoomInterface | undefined = Room.rooms.find(r => r.id === roomId);
+        if (room === undefined) return false;
+
+        return room.users.includes(user.getId());
+    }
 }
