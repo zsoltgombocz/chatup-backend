@@ -86,7 +86,7 @@ export class SocketServer implements ServerInterface {
             });
 
             console.log('Current user list:');
-            console.log(this.connectedUsers);
+            console.log(this.connectedUsers.map((u: User) => u.getId()));
         }
     }
 
@@ -118,17 +118,21 @@ export class SocketServer implements ServerInterface {
     recoverUser = (token: string): User | undefined => {
         const user: User | undefined = this.getUserById(token);
         user?.recover();
+        console.log(
+            user ?
+                'Recovered user with id: ' + user?.getId()
+                : 'Cannot recover user with id: ' + token);
         return user;
     }
 
     onConnect = (client): void => {
         const token: string | undefined = this.getAuthToken(client) || uuidv4();
-        console.log('somebody connected with', token);
-        let user = this.recoverUser(token) || new User(token, client);
+        let user: User = this.recoverUser(token) || new User(token, client);
         user.setSocket(client);
+        console.log(user.getRoomId())
 
         this.listenUserInteraction(user, client);
-        client.emit('userAuthDone', token);
+        client.emit('userAuthDone', { token, roomId: user.getRoomId() });
 
         this.addToConnectedUsers(user);
     }
@@ -176,14 +180,14 @@ export class SocketServer implements ServerInterface {
         });
         client.on("validateChat", ({ roomId, token }, callback: Function | undefined) => {
             const user: User = this.getUserById(token);
+            console.log(roomId, token);
             const valid: boolean = Room.getInstance().isUserInRoom(user, roomId);
-
             callback?.({
                 status: valid
             });
         });
 
-        /*client.on('leavedChat', () => {
+        client.on('leavedChat', () => {
             const room: SingleRoomInterface | undefined = Room.getInstance().getRoomById(user.getRoomId().current);
             const partner: User = this.getUserById(room?.users.find(usr => usr !== user.getId()));
 
@@ -191,9 +195,14 @@ export class SocketServer implements ServerInterface {
                 console.log('leavedChat - UNDEFINED ROOM | UNDEFINED PARTNER');
                 return;
             }
+
+            console.log(`User (${user.getId()}) leaved chat, 
+                sendng out event to partner (${partner.getId()}) in room:'
+                `, room.id);
+
             partner.getSocket().emit('partnerLeavedChat');
             user.setStatus(UserStatusEnum.IDLE);
-            Room.getInstance().removeUserFromRoom(user);
-        })*/
+            //Room.getInstance().removeUserFromRoom(user);
+        })
     }
 }
