@@ -119,7 +119,7 @@ export class User implements UserInterface {
 
     setCurrentRoomId(roomId: string | null): void {
         this.socket.emit('userRoomIdChanged', roomId);
-        this.setLastRoomId(this.roomId.current);
+        this.setLastRoomId(this.roomId.current !== null ? this.roomId.current : roomId);
 
         this.roomId.current = roomId;
     }
