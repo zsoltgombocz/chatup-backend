@@ -40,6 +40,7 @@ export class Queue implements QueueInterface {
 
         Queue.queue.push(user);
         user.setStatus(UserStatusEnum.IN_QUEUE);
+        user.setCurrentRoomId(null);
         console.log('Added to queue, current: ', Queue.queue.length);
 
         cb?.();
