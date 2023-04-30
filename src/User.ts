@@ -35,6 +35,7 @@ export interface UserInterface {
     getTime(): timeInterface,
     getCurrentStatus(): UserStatusEnum,
     getRoomId(): roomIdInterface,
+    getUserData(): UserDataInterface,
 
     //SETTERS
     setSocket(socket: any): void,
@@ -95,6 +96,10 @@ export class User implements UserInterface {
 
     getRoomId = (): roomIdInterface => {
         return this.roomId;
+    }
+
+    getUserData(): UserDataInterface {
+        return this.userData;
     }
 
     setSocket = (socket: any): void => {
