@@ -6,6 +6,7 @@ export interface RoomInterface {
     addUserToRoom: (user: User, roomId: string, cb?: Function | undefined) => void,
     removeUserFromRoom: (user: User, roomId?: string, cb?: Function | undefined) => void,
     getRoomById: (roomId: string) => SingleRoomInterface | undefined,
+    getPartner: (user: User) => string,
 }
 
 export interface SingleRoomInterface {
@@ -62,9 +63,17 @@ export class Room implements RoomInterface {
         return Room.rooms.find(room => room.id === roomId);
     }
 
+    getPartner = (user: User): string => {
+        const room: SingleRoomInterface | undefined = this.getRoomById(user.getRoomId().current);
+        if (room === undefined) return undefined;
+
+        return room.users.find(userId => userId !== user.getId());
+    }
+
     static deleteEmptyRooms = (): void => {
         const nonEmptyRooms = Room.rooms.filter(room => room.users.length !== 0);
         console.log(`Deleted ${Room.rooms.length - nonEmptyRooms.length} rooms!`);
+        console.log('Rooms:', nonEmptyRooms.map(room => room.id));
         Room.rooms = nonEmptyRooms;
     }
 
