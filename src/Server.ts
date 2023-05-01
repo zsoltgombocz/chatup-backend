@@ -8,6 +8,7 @@ import { UserStatusEnum } from './enums';
 
 import { CronJob } from 'cron';
 import { Room, SingleRoomInterface } from './Room';
+import { RedisServer } from './RedisServer';
 
 export interface ServerInterface {
     server: any,
@@ -37,6 +38,12 @@ export class SocketServer implements ServerInterface {
         this.server.on('connection', this.onConnect);
         const enabledCleanup = parseInt(process.env.ENABLE_CLEANUP) || 0;
         if (enabledCleanup) this.#startCleanup(2);
+
+        RedisServer.establishConnection(
+            process.env.REDIS_HOST,
+            6379,
+            process.env.REDIS_PW
+        );
     }
 
     #startCleanup = (minutes: number = 5): void => {
@@ -256,13 +263,12 @@ export class SocketServer implements ServerInterface {
             console.log(message);
         });
 
-        client.on('typing', (message) => {
+        client.on('typing', (typing) => {
             const partnerId: string | undefined = Room.getInstance().getPartner(user);
             const partner: User | undefined = this.getUserById(partnerId);
             if (partnerId === undefined || partner === undefined) return;
-            client.to(partner)
 
-            console.log(message);
+            client.to(partner.getSocket().id).emit('partnerTyping', typing);
         });
     }
 }
