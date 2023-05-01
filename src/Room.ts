@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { User } from './User';
+import { RedisServer } from './RedisServer';
 
 export interface RoomInterface {
     generateRoom: () => string,
@@ -7,11 +8,22 @@ export interface RoomInterface {
     removeUserFromRoom: (user: User, roomId?: string, cb?: Function | undefined) => void,
     getRoomById: (roomId: string) => SingleRoomInterface | undefined,
     getPartner: (user: User) => string,
+    getAllMessages: (roomId: string) => Promise<MessageInterface[]>,
 }
 
 export interface SingleRoomInterface {
     id: string,
     users: string[]
+}
+
+export interface RawMessageInterface {
+    from: string,
+    content: string
+}
+
+export interface MessageInterface extends RawMessageInterface {
+    id: number,
+    reaction: string
 }
 export class Room implements RoomInterface {
     private static instance: Room;
@@ -91,5 +103,47 @@ export class Room implements RoomInterface {
         if (room === undefined) return false;
 
         return room.users.includes(user.getId());
+    }
+
+    getAllMessages = (roomId: string): Promise<MessageInterface[]> => {
+        return new Promise<MessageInterface[]>(async (resolve) => {
+            const rawMessages: string[] = await RedisServer.getInstance().lrange(roomId, 0, -1);
+
+            const messages: MessageInterface[] = rawMessages.map((message, index) => {
+                const parsed = JSON.parse(message);
+
+                return {
+                    content: parsed?.content || ":?:",
+                    from: parsed?.from || -1,
+                    id: index,
+                    reaction: parsed?.reaction || undefined
+                } as MessageInterface;
+            });
+
+            resolve(messages);
+        });
+    }
+
+    addMessage = (user: User, message: string): Promise<boolean> => {
+        return new Promise<boolean>(async (resolve, reject) => {
+            const room: SingleRoomInterface | undefined = this.getRoomById(user.getRoomId().current);
+            if (room === undefined) reject(false);
+
+            try {
+                const messageId: number = await RedisServer.getInstance().llen(room.id);
+                const messageObject: MessageInterface = {
+                    content: message,
+                    id: messageId,
+                    from: user.getId(),
+                    reaction: undefined
+                }
+                RedisServer.getInstance().rpush(room.id, JSON.stringify(messageObject));
+                resolve(true);
+            } catch (error) {
+                reject(error);
+            }
+
+        });
+
     }
 }
