@@ -68,14 +68,13 @@ export class SocketServer implements ServerInterface {
         if (this.connectedUsers.length === 0) return console.log('No user deleted because no user connected!');
 
         const expiredUserList = this.connectedUsers.filter((user: User) => {
-            console.log(user.getId(), user.getCurrentStatus());
             if (user.getCurrentStatus() !== UserStatusEnum.DISCONNECTED) return false;
 
             const elapsedTimeInMinutes = Math.floor((Date.now() - user.getTime().leave) / 60000);
 
             return elapsedTimeInMinutes >= minutes;
         });
-        console.log(expiredUserList);
+
         if (expiredUserList.length > 0) {
             console.log(`Deleting ${expiredUserList.length} inactive user!`);
             expiredUserList.forEach((user: User) => {
@@ -143,6 +142,10 @@ export class SocketServer implements ServerInterface {
         this.listenUserInteraction(user, client);
         client.emit('userAuthDone', { token, roomId: user.getRoomId() });
 
+        if (user.getRoomId().current) {
+            user.getSocket().join(user.getRoomId().current);
+        }
+
         this.addToConnectedUsers(user);
     }
 
@@ -150,6 +153,8 @@ export class SocketServer implements ServerInterface {
         client.on('updateData', (data: UserDataInterface) => user.updateUserData(data));
         client.on('startSearch', () => {
             this.queue.addToQueue(user, () => {
+                console.log('added to queue', user.getRoomId());
+
                 this.queue.searchForPartner(user, (partner) => {
                     console.log('Found partner: ', partner.getId());
                     this.queue.removeFromQueue(user);
@@ -183,6 +188,11 @@ export class SocketServer implements ServerInterface {
                 const partner: User | undefined = this.connectedUsers.find(usr => usr.getId() === partnerIdFromRoom);
 
                 partner.getSocket().emit('partnerLeavedChat');
+                Room.getInstance().addMessage(
+                    partner,
+                    "Partnered elhagyta a chatet! De még van esély hogy visszajön ;)",
+                    true
+                ).then(res => Room.getInstance().sendOutMessages(user, partner.getRoomId().current));
 
                 if (partner !== undefined && partner.getCurrentStatus() === UserStatusEnum.DISCONNECTED) {
                     Room.getInstance().removeUserFromRoom(user);
@@ -190,21 +200,37 @@ export class SocketServer implements ServerInterface {
                 }
             }
         });
-        client.on("validateChat", ({ roomId, token }, callback: Function | undefined) => {
+        client.on("validateChat", async ({ roomId, token }, callback: Function | undefined) => {
             const user: User = this.getUserById(token);
             const room: SingleRoomInterface = Room.getInstance().getRoomById(roomId);
-            console.log(room, token);
+
             if (user === undefined || room === undefined) return;
             const partner: User = this.getUserById(room.users.find(userId => userId !== token));
 
             const valid: boolean = Room.getInstance().isUserInRoom(user, roomId);
+
             if (valid) {
                 user?.setStatus(UserStatusEnum.IN_CHAT);
                 partner?.setStatus(UserStatusEnum.IN_CHAT);
                 user?.getSocket().emit('partnerStatusChange', partner?.getCurrentStatus());
                 partner?.getSocket().emit('partnerStatusChange', user?.getCurrentStatus());
 
+                Room.getInstance().addMessage(
+                    partner,
+                    "Partnered csatlakozott a chathez!",
+                    true
+                ).then(res => Room.getInstance().sendOutMessages(user, partner.getRoomId().current));
+
+                partner?.getSocket().emit('partnerJoinedChat');
             }
+
+            let messages = [];
+            try {
+                messages = await Room.getInstance().getAllMessages(roomId);
+            } catch (error) {
+                console.log('Error validating - all message getting: ', error);
+            }
+
             callback?.({
                 status: valid,
                 partnerData: {
@@ -213,6 +239,7 @@ export class SocketServer implements ServerInterface {
                     interests: partner?.getUserData().interests
                 },
                 partnerStatus: partner?.getCurrentStatus(),
+                messages
             });
         });
 
@@ -257,10 +284,21 @@ export class SocketServer implements ServerInterface {
         })
 
         client.on('sendMessage', (message) => {
-            const room: SingleRoomInterface | undefined = Room.getInstance().getRoomById(user.getRoomId().current);
-            if (room === undefined) return;
+            const currentRoom: string = user.getRoomId().current;
+            Room.getInstance().addMessage(user, message)
+                .then(async (res) => {
+                    Room.getInstance().sendOutMessages(user, currentRoom);
+                })
+                .catch(err => console.log(err));
+        });
 
-            console.log(message);
+        client.on('addReaction', ({ messageId, reaction }) => {
+            const currentRoom: string = user.getRoomId().current;
+            Room.getInstance().addReaction(user, messageId, reaction)
+                .then(async (res) => {
+                    Room.getInstance().sendOutMessages(user, currentRoom);
+                })
+                .catch(err => console.log(err));
         });
 
         client.on('typing', (typing) => {
