@@ -9,6 +9,9 @@ export interface RoomInterface {
     getRoomById: (roomId: string) => SingleRoomInterface | undefined,
     getPartner: (user: User) => string,
     getAllMessages: (roomId: string) => Promise<MessageInterface[]>,
+    addMessage: (user: User, message: string, isNeutral: boolean) => Promise<boolean>,
+    addReaction: (user: User, messageId: string, reaction: string | undefined) => Promise<boolean>,
+    sendOutMessages: (user: User, roomId: string) => Promise<void>
 }
 
 export interface SingleRoomInterface {
@@ -17,13 +20,14 @@ export interface SingleRoomInterface {
 }
 
 export interface RawMessageInterface {
-    from: string,
+    from: string | number,
     content: string
 }
 
 export interface MessageInterface extends RawMessageInterface {
-    id: number,
-    reaction: string
+    id: string,
+    reaction: string,
+    visibleFor?: string | undefined
 }
 export class Room implements RoomInterface {
     private static instance: Room;
@@ -56,6 +60,9 @@ export class Room implements RoomInterface {
         if (room === undefined && room?.users?.length < 2) return;
 
         this.removeUserFromRoom(user);
+        user.leaveAllSocketRoom();
+
+        user.getSocket().join(roomId);
 
         user.setCurrentRoomId(roomId);
         room?.users?.push(user.getId());
@@ -65,6 +72,8 @@ export class Room implements RoomInterface {
     removeUserFromRoom = (user: User, roomId?: string, cb?: Function | undefined): void => {
         const room = this.getRoomById(roomId) || Room.rooms.find(room => room.users.includes(user.getId()));
         if (room === undefined) return;
+
+        user.getSocket().leave(roomId);
 
         user.setCurrentRoomId(null);
         room.users = room.users.filter(u => u !== user.getId());
@@ -106,44 +115,70 @@ export class Room implements RoomInterface {
     }
 
     getAllMessages = (roomId: string): Promise<MessageInterface[]> => {
-        return new Promise<MessageInterface[]>(async (resolve) => {
-            const rawMessages: string[] = await RedisServer.getInstance().lrange(roomId, 0, -1);
+        return new Promise<MessageInterface[]>(async (resolve, reject) => {
+            try {
+                const rawMessages: string[] = await RedisServer.getInstance().lrange(roomId, 0, -1);
 
-            const messages: MessageInterface[] = rawMessages.map((message, index) => {
-                const parsed = JSON.parse(message);
+                const messages: MessageInterface[] = rawMessages.map(message => JSON.parse(message));
 
-                return {
-                    content: parsed?.content || ":?:",
-                    from: parsed?.from || -1,
-                    id: index,
-                    reaction: parsed?.reaction || undefined
-                } as MessageInterface;
-            });
+                resolve(messages);
+            } catch (error) {
+                reject([]);
+            }
 
-            resolve(messages);
         });
     }
 
-    addMessage = (user: User, message: string): Promise<boolean> => {
+    addMessage = (user: User, message: string, isNeutral = false): Promise<boolean> => {
         return new Promise<boolean>(async (resolve, reject) => {
             const room: SingleRoomInterface | undefined = this.getRoomById(user.getRoomId().current);
-            if (room === undefined) reject(false);
+            console.log(message);
+            if (room === undefined || message.length === 0) reject(false);
 
             try {
-                const messageId: number = await RedisServer.getInstance().llen(room.id);
                 const messageObject: MessageInterface = {
                     content: message,
-                    id: messageId,
-                    from: user.getId(),
-                    reaction: undefined
+                    id: uuidv4(),
+                    from: isNeutral ? -1 : user.getId(),
+                    reaction: undefined,
+                    visibleFor: isNeutral ? user.getId() : undefined
                 }
+
                 RedisServer.getInstance().rpush(room.id, JSON.stringify(messageObject));
                 resolve(true);
             } catch (error) {
                 reject(error);
             }
-
         });
+    }
 
+    addReaction = (user: User, messageId: string, reaction: string | undefined): Promise<boolean> => {
+        return new Promise<boolean>(async (resolve, reject) => {
+            const room: SingleRoomInterface | undefined = this.getRoomById(user.getRoomId().current);
+            if (room === undefined) reject(false);
+
+            try {
+                const allMessages: MessageInterface[] = await this.getAllMessages(room.id);
+                const messageIndex: number = allMessages.findIndex(msg => msg.id === messageId);
+                if (messageIndex === -1) reject(false);
+
+                const message: MessageInterface = allMessages[messageIndex];
+
+                await RedisServer.getInstance().lset(room.id, messageIndex, JSON.stringify({
+                    ...message,
+                    reaction
+                } as MessageInterface));
+
+                resolve(true);
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
+
+    sendOutMessages = async (user: User, roomId: string): Promise<void> => {
+        const updatedMessages = await Room.getInstance().getAllMessages(roomId);
+        user.getSocket().to(roomId).emit('updatedMessages', updatedMessages);
+        user.getSocket().emit('updatedMessages', updatedMessages);
     }
 }
