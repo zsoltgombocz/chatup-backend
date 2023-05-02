@@ -192,7 +192,8 @@ export class SocketServer implements ServerInterface {
                     partner,
                     "Partnered elhagyta a chatet! De még van esély hogy visszajön ;)",
                     true
-                ).then(res => Room.getInstance().sendOutMessages(user, partner.getRoomId().current));
+                ).then(res => Room.getInstance().sendOutMessages(user, partner.getRoomId().current))
+                    .catch(err => console.log('Error sending msg on leave', err));
 
                 if (partner !== undefined && partner.getCurrentStatus() === UserStatusEnum.DISCONNECTED) {
                     Room.getInstance().removeUserFromRoom(user);
@@ -219,7 +220,8 @@ export class SocketServer implements ServerInterface {
                     partner,
                     "Partnered csatlakozott a chathez!",
                     true
-                ).then(res => Room.getInstance().sendOutMessages(user, partner.getRoomId().current));
+                ).then(res => Room.getInstance().sendOutMessages(user, partner.getRoomId().current))
+                    .catch(err => console.log('Error sending msg on join', err));
 
                 partner?.getSocket().emit('partnerJoinedChat');
             }
