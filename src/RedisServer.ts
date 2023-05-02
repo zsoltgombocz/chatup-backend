@@ -19,7 +19,7 @@ export class RedisServer implements RedisInterface {
         return RedisServer.instance;
     }
 
-    static establishConnection(host: string, port: number, password: string): void {
+    static establishConnection = (host: string, port: number, password: string): void => {
 
         if (RedisServer.instance) return;
 
@@ -34,6 +34,5 @@ export class RedisServer implements RedisInterface {
         });
 
         RedisServer.instance = client;
-
     }
 }
