@@ -49,6 +49,7 @@ export interface UserInterface {
     isPairableWith(user: User, strict?: boolean): boolean
     disconnect(time: number, reason?: string): void
     recover(): void
+    leaveAllSocketRoom(): void,
 }
 
 export class User implements UserInterface {
@@ -188,5 +189,15 @@ export class User implements UserInterface {
         this.time.leave = null;
         this.disconnectReason = undefined;
         this.status = UserStatusEnum.IDLE;
+    }
+
+    leaveAllSocketRoom = (): void => {
+        const rooms: string[] = Object.keys(this.socket.rooms);
+
+        //First element always the own room. We want to leave the manuallz assigned rooms.
+        rooms.shift();
+        rooms.forEach(roomId => {
+            this.socket.leave(roomId);
+        });
     }
 }
