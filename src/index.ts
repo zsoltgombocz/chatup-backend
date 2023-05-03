@@ -6,22 +6,31 @@ import bodyParser from "body-parser";
 
 require('dotenv').config();
 
-const PORT = process.env.PORT || 3000;
+const API_PORT = process.env.PORT || 3000;
+const SOCKET_PORT = process.env.PORT || 3001;
 
-const app = express();
-app.set("port", PORT);
+const apps = {
+    api: express(),
+    socket: express()
+}
 
-let http = require("http").Server(app);
+apps.api.set("port", 3000);
+apps.socket.set("port", 3001);
 
-app.use(bodyParser.json());
+let http = {
+    api: require("http").Server(apps.api),
+    socket: require("http").Server(apps.socket),
+}
 
-app.use('/chat', chatRoutes);
+apps.api.use(bodyParser.json());
 
-app.get("/", (req: any, res: any) => {
+apps.api.use('/chat', chatRoutes);
+
+apps.api.get("/", (req: any, res: any) => {
     res.json({ message: 'ChatUp backend server. Version: 1.0.0' });
 });
 
-const socket: ServerInterface = new SocketServer(http);
+const socket: ServerInterface = new SocketServer(http.socket);
 
 instrument(socket.server, {
     auth: {
@@ -32,6 +41,10 @@ instrument(socket.server, {
     mode: "development",
 });
 
-http.listen(PORT, function () {
-    console.log(`Listening on *:${PORT}`);
+http.api.listen(API_PORT, function () {
+    console.log(`API listening on ${API_PORT}`);
+});
+
+http.socket.listen(SOCKET_PORT, function () {
+    console.log(`Socket listening on ${SOCKET_PORT}`);
 });
