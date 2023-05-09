@@ -41,7 +41,7 @@ export class Queue implements QueueInterface {
         Queue.queue.push(user);
         user.setStatus(UserStatusEnum.IN_QUEUE);
         user.setCurrentRoomId(null);
-        console.log('Added to queue, current: ', Queue.queue.length);
+        console.log(`Added to queue (${user.getId()}), current: ${Queue.queue.length}`);
 
         cb?.();
     };
@@ -53,13 +53,20 @@ export class Queue implements QueueInterface {
         const filteredQueue = Queue.queue.filter(u => u.getId() !== inQueueUser.getId());
         Queue.queue = filteredQueue;
         inQueueUser?.setStatus(UserStatusEnum.IDLE);
-        console.log('Removed from queue, current: ', Queue.queue.length);
+        console.log(`Removed from queue (${user.getId()}), current: ${Queue.queue.length}`);
+
         cb?.();
     }
 
     searchForPartner = (user: User, onPartnerFound: Function | undefined): any => {
+        console.log(`User started searching for partner. (${user.getId()})`);
         const queueUsers = Queue.queue.filter(u => u.id !== user.getId())
-        const pairableWith = queueUsers.filter((u: User) => user.isPairableWith(u) && u.getRoomId().current === null);
+        const pairableWith = queueUsers.filter((u: User) => {
+            console.log(`User (${u.getId()}) is pairable with searcher (${user.getId()})?`);
+            console.log(`User has room? ${u.getRoomId().current === null ? 'No' : 'Yes'}`);
+
+            return user.isPairableWith(u) && u.getRoomId().current === null
+        });
 
         if (pairableWith.length === 0) return;
 

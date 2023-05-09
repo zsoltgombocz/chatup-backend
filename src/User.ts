@@ -137,8 +137,10 @@ export class User implements UserInterface {
     //Checks if partners own and prefered gender match with user's
     //Returns true if matchable
     #genderCheck(partnerOwn: Gender, partnerPreference: Gender): boolean {
+        console.log('Gender check started:');
+        console.log(`Searcher values: own: ${this.getUserData()?.ownGender} | partnerPref: ${this.getUserData()?.partnerGender}`);
+        console.log(`Partner values: own: ${partnerOwn} | partnerPref: ${partnerPreference}`);
         if (this.userData.ownGender !== partnerPreference && partnerPreference !== Gender.ALL) return false;
-
         if (this.userData.partnerGender !== partnerOwn && this.userData.partnerGender !== Gender.ALL) return false;
 
         return true;
@@ -149,7 +151,9 @@ export class User implements UserInterface {
     #locationCheck(partnerLocation: string | null, partnerPreferedCounties: string[], partnerMapPref: number): boolean {
         const userLocation: string | null = this.getLocation();
         const userPreferedCounties: string[] = this.userData.counties;
-
+        console.log('Location check started:');
+        console.log(`Searcher values: location: ${userLocation} | prefCounties: ${userPreferedCounties}`);
+        console.log(`Partner values: location: ${partnerLocation} | prefCounties: ${partnerPreferedCounties} | checkbox: ${partnerMapPref}`);
         if (this.userData.mapPref === 0 && partnerMapPref === 0) return true;
 
         if (this.userData.mapPref === 0 && partnerLocation === null && partnerPreferedCounties.includes(userLocation)) return true;
@@ -163,13 +167,16 @@ export class User implements UserInterface {
     }
     //Check if the selected partner is pairable with the user
     isPairableWith = (partner: User, strict: boolean = true): boolean => {
+        console.log(`User (${this.getId()}) started checking values with ${partner.getId()}.`);
         if (this.userData === null) false;
         //Check gender
         const gender: boolean = this.#genderCheck(partner.userData.ownGender, partner.userData.partnerGender);
+        console.log(gender ? 'Gender check passed!' : 'Gender check failed!');
         if (!gender) return false;
 
         //Check location
         const location: boolean = this.#locationCheck(partner.getLocation(), partner.userData.counties, partner.userData.mapPref);
+        console.log(gender ? 'Location check passed!' : 'Location check failed!');
         if (!location) return false;
 
         return true;

@@ -153,8 +153,6 @@ export class SocketServer implements ServerInterface {
         client.on('updateData', (data: UserDataInterface) => user.updateUserData(data));
         client.on('startSearch', () => {
             this.queue.addToQueue(user, () => {
-                console.log('added to queue', user.getRoomId());
-
                 this.queue.searchForPartner(user, (partner) => {
                     console.log('Found partner: ', partner.getId());
                     this.queue.removeFromQueue(user);
