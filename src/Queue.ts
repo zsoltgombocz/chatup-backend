@@ -39,9 +39,10 @@ export class Queue implements QueueInterface {
         if (Queue.inQueue(user) !== null) return;
 
         Queue.queue.push(user);
-        user.setStatus(UserStatusEnum.IN_QUEUE);
-        user.setCurrentRoomId(null);
-        console.log(`Added to queue (${user.getId()}), current: ${Queue.queue.length}`);
+
+        user?.setStatus(UserStatusEnum.IN_QUEUE);
+        user?.setCurrentRoomId(null);
+        console.log('Added to queue, current: ', Queue.queue.length);
 
         cb?.();
     };
@@ -53,6 +54,7 @@ export class Queue implements QueueInterface {
         const filteredQueue = Queue.queue.filter(u => u.getId() !== inQueueUser.getId());
         Queue.queue = filteredQueue;
         inQueueUser?.setStatus(UserStatusEnum.IDLE);
+
         console.log(`Removed from queue (${user.getId()}), current: ${Queue.queue.length}`);
 
         cb?.();

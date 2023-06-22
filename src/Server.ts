@@ -141,6 +141,7 @@ export class SocketServer implements ServerInterface {
 
         this.listenUserInteraction(user, client);
         client.emit('userAuthDone', { token, roomId: user.getRoomId() });
+        client.emit('queuePopulation', Queue.getQueue().length);
 
         if (user.getRoomId().current) {
             user.getSocket().join(user.getRoomId().current);
@@ -150,8 +151,11 @@ export class SocketServer implements ServerInterface {
     }
 
     listenUserInteraction = (user: User, client): void => {
-        client.on('updateData', (data: UserDataInterface) => user.updateUserData(data));
-        client.on('startSearch', () => {
+        client.on('startSearch', (data: UserDataInterface) => {
+            if (data?.valid === false) return;
+
+            //!: VALIDATE EVERY FIELD LATER
+            user.updateUserData(data);
             this.queue.addToQueue(user, () => {
                 this.queue.searchForPartner(user, (partner) => {
                     console.log('Found partner: ', partner.getId());
@@ -171,10 +175,12 @@ export class SocketServer implements ServerInterface {
             });
             this.server.emit('queuePopulation', Queue.getQueue().length);
         });
+
         client.on('cancelSearch', () => {
             this.queue.removeFromQueue(user);
             this.server.emit('queuePopulation', Queue.getQueue().length);
         });
+
         client.on("disconnect", (reason) => {
             user.disconnect(Date.now(), reason);
             this.queue.removeFromQueue(user.getId());
@@ -199,6 +205,7 @@ export class SocketServer implements ServerInterface {
                 }
             }
         });
+
         client.on("validateChat", async ({ roomId, token }, callback: Function | undefined) => {
             const user: User = this.getUserById(token);
             const room: SingleRoomInterface = Room.getInstance().getRoomById(roomId);
