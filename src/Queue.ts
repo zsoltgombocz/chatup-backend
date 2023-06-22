@@ -1,14 +1,9 @@
 import { UserStatusEnum } from "./enums";
 import { User } from "./User";
 
-export type removeFromQueue = {
-    (user: string, cb?: Function | undefined): void;
-    (user: User, cb?: Function | undefined): void;
-}
-
 export interface QueueInterface {
     addToQueue: (user: User, cb?: Function | undefined) => void,
-    removeFromQueue: removeFromQueue,
+    removeFromQueue: (user: User, cb?: Function | undefined) => void,
 }
 export class Queue implements QueueInterface {
     private static instance: Queue;
@@ -47,7 +42,7 @@ export class Queue implements QueueInterface {
         cb?.();
     };
 
-    removeFromQueue = (user: any, cb: Function | undefined = undefined): void => {
+    removeFromQueue = (user: User, cb: Function | undefined = undefined): void => {
         const inQueueUser: User | null = Queue.inQueue(user);
         if (inQueueUser === null) return;
 

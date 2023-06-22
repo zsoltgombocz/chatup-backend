@@ -183,7 +183,7 @@ export class SocketServer implements ServerInterface {
 
         client.on("disconnect", (reason) => {
             user.disconnect(Date.now(), reason);
-            this.queue.removeFromQueue(user.getId());
+            this.queue.removeFromQueue(user);
             if (user.getRoomId() !== null) {
                 const room: SingleRoomInterface | undefined = Room.getInstance().getRoomById(user.getRoomId().current);
                 if (room === undefined) return;
