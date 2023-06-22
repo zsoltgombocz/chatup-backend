@@ -7,6 +7,7 @@ export interface UserDataInterface {
     counties: string[],
     mapPref: number,
     interests: string[],
+    valid: boolean,
 }
 
 interface timeInterface {
@@ -46,7 +47,7 @@ export interface UserInterface {
     setLastRoomId(roomId: string | null): void
 
     //FUNQ
-    isPairableWith(user: User, strict?: boolean): boolean
+    isPairableWith(user: User): boolean
     disconnect(time: number, reason?: string): void
     recover(): void
     leaveAllSocketRoom(): void,
@@ -71,7 +72,7 @@ export class User implements UserInterface {
     constructor(id, socket: any) {
         this.socket = socket;
         this.id = id;
-        this.time.join = socket.handshake.issued;
+        this.time.join = socket?.handshake?.issued;
     }
 
     setTime = (join: number | null | undefined, leave: number | null | undefined): void => {
@@ -99,7 +100,7 @@ export class User implements UserInterface {
         return this.roomId;
     }
 
-    getUserData(): UserDataInterface {
+    getUserData = (): UserDataInterface => {
         return this.userData;
     }
 
@@ -108,7 +109,7 @@ export class User implements UserInterface {
     }
 
     setStatus = (status: UserStatusEnum) => {
-        this.socket.emit('userStatusChanged', status);
+        this.socket?.emit('userStatusChanged', status);
         this.status = status;
     }
 
@@ -119,18 +120,18 @@ export class User implements UserInterface {
     }
 
     updateUserData = (data: UserDataInterface) => {
-        this.socket.emit('userDataChanged', data);
+        this.socket?.emit('userDataChanged', data);
         this.userData = data;
     }
 
-    setCurrentRoomId(roomId: string | null): void {
-        this.socket.emit('userRoomIdChanged', roomId);
+    setCurrentRoomId = (roomId: string | null): void => {
+        this.socket?.emit('userRoomIdChanged', roomId);
         this.setLastRoomId(this.roomId.current !== null ? this.roomId.current : roomId);
 
         this.roomId.current = roomId;
     }
 
-    setLastRoomId(roomId: string | null): void {
+    setLastRoomId = (roomId: string | null): void => {
         this.roomId.last = roomId;
     }
 
