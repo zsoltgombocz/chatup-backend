@@ -171,7 +171,7 @@ export class User implements UserInterface {
         console.log(`User (${this.getId()}) started checking values with ${partner.getId()}.`);
         if (this.userData === null) false;
         //Check gender
-        console.log(partner);
+
         const gender: boolean = this.#genderCheck(partner.userData.ownGender, partner.userData.partnerGender);
         console.log(gender ? 'Gender check passed!' : 'Gender check failed!');
         if (!gender) return false;
