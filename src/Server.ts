@@ -44,6 +44,12 @@ export class SocketServer implements ServerInterface {
             6379,
             process.env.REDIS_PW
         );
+
+        RedisServer.getInstance().on('error', (err) => {
+            console.log('Error connecting to Redis:', err);
+            console.log('Shutting down...');
+            process.exit(-1);
+        });
     }
 
     #startCleanup = (minutes: number = 5): void => {

@@ -25,14 +25,6 @@ export class RedisServer implements RedisInterface {
 
         const client = new Redis({ host, port, password, retryStrategy: null });
 
-        client.on('connect', () => {
-            console.log('Connected to Redis!');
-        });
-
-        client.on('error', (err) => {
-            console.log('Error connecting to Redis:', err);
-        });
-
         RedisServer.instance = client;
     }
 }
