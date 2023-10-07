@@ -138,9 +138,6 @@ export class User implements UserInterface {
     //Checks if partners own and prefered gender match with user's
     //Returns true if matchable
     #genderCheck(partnerOwn: Gender, partnerPreference: Gender): boolean {
-        console.log('Gender check started:');
-        console.log(`Searcher values: own: ${this.getUserData()?.ownGender} | partnerPref: ${this.getUserData()?.partnerGender}`);
-        console.log(`Partner values: own: ${partnerOwn} | partnerPref: ${partnerPreference}`);
         if (this.userData.ownGender !== partnerPreference && partnerPreference !== Gender.ALL) return false;
         if (this.userData.partnerGender !== partnerOwn && this.userData.partnerGender !== Gender.ALL) return false;
 
@@ -152,33 +149,59 @@ export class User implements UserInterface {
     #locationCheck(partnerLocation: string | null, partnerPreferedCounties: string[], partnerMapPref: number): boolean {
         const userLocation: string | null = this.getLocation();
         const userPreferedCounties: string[] = this.userData.counties;
-        console.log('Location check started:');
-        console.log(`Searcher values: location: ${userLocation} | prefCounties: ${userPreferedCounties}`);
-        console.log(`Partner values: location: ${partnerLocation} | prefCounties: ${partnerPreferedCounties} | checkbox: ${partnerMapPref}`);
-        if (this.userData.mapPref === 0 && partnerMapPref === 0) return true;
 
-        if (this.userData.mapPref === 0 && partnerLocation === null && partnerPreferedCounties.includes(userLocation)) return true;
-        if (partnerMapPref === 0 && userLocation === null && userPreferedCounties.includes(partnerLocation)) return true;
+        // Rule 1: Both users prefer to search in every county
+        if (this.userData.mapPref === 0 && partnerMapPref === 0) {
+            return true;
+        }
 
-        if (userLocation === null && partnerLocation === null) return false;
+        // Rule 2: User wants to specify counties, partner wants to search in every county,
+        // and partner's location matches a preferred county of the user
+        if (this.userData.mapPref === 1 &&
+            partnerMapPref === 0 &&
+            userPreferedCounties.includes(partnerLocation)) {
+            return true;
+        }
 
-        if (partnerPreferedCounties.includes(userLocation) && userPreferedCounties.includes(partnerLocation)) return true;
+        // Rule 3: Both users want to specify counties, and their location preferences match
+        if (this.userData.mapPref === 1 &&
+            partnerMapPref === 1 &&
+            userPreferedCounties.includes(partnerLocation) &&
+            partnerPreferedCounties.includes(userLocation)) {
+            return true;
+        }
 
+        // Rule 4: User wants to specify counties, partner's location is null (search everywhere),
+        // and their location preferences match
+        if (this.userData.mapPref === 1 &&
+            partnerMapPref === 1 &&
+            partnerLocation == null &&
+            partnerPreferedCounties.includes(userLocation)) {
+            return true;
+        }
+
+        // Rule 5: User wants to search everywhere, partner wants to specify counties,
+        // and partner's location matches a preferred county of the user
+        if (this.userData.mapPref === 0 &&
+            partnerMapPref === 1 &&
+            partnerPreferedCounties.includes(userLocation)) {
+            return true;
+        }
+
+        // If none of the conditions above are met, the users cannot be matched
         return false;
     }
+
     //Check if the selected partner is pairable with the user
-    isPairableWith = (partner: User, strict: boolean = true): boolean => {
-        console.log(`User (${this.getId()}) started checking values with ${partner.getId()}.`);
+    isPairableWith = (partner: User): boolean => {
         if (this.userData === null) false;
         //Check gender
 
         const gender: boolean = this.#genderCheck(partner.userData.ownGender, partner.userData.partnerGender);
-        console.log(gender ? 'Gender check passed!' : 'Gender check failed!');
         if (!gender) return false;
 
         //Check location
         const location: boolean = this.#locationCheck(partner.getLocation(), partner.userData.counties, partner.userData.mapPref);
-        console.log(gender ? 'Location check passed!' : 'Location check failed!');
         if (!location) return false;
 
         return true;
