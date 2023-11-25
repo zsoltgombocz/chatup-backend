@@ -1,21 +1,19 @@
 import express from "express";
-import { ServerInterface, SocketServer } from "./Server";
-import { instrument } from "@socket.io/admin-ui";
 import chatRoutes from "./routes/chatRoutes";
 import bodyParser from "body-parser";
 
 require('dotenv').config();
 
-const API_PORT = process.env.PORT || 3000;
-const SOCKET_PORT = process.env.PORT || 3001;
+const API_PORT = process.env.SOCKET_PORT || 3000;
+const SOCKET_PORT = process.env.API_PORT || 3001;
 
 const apps = {
     api: express(),
     socket: express()
 }
 
-apps.api.set("port", 3000);
-apps.socket.set("port", 3001);
+apps.api.set("port", API_PORT);
+apps.socket.set("port", SOCKET_PORT);
 
 let http = {
     api: require("http").Server(apps.api),
@@ -27,18 +25,7 @@ apps.api.use(bodyParser.json());
 apps.api.use('/chat', chatRoutes);
 
 apps.api.get("/", (req: any, res: any) => {
-    res.json({ message: 'ChatUp backend server. Version: 1.0.0' });
-});
-
-const socket: ServerInterface = new SocketServer(http.socket);
-
-instrument(socket.server, {
-    auth: {
-        type: "basic",
-        username: process.env.ADMIN_NAME,
-        password: process.env.ADMIN_PW
-    },
-    mode: "development",
+    res.json({ message: 'ChatUp API v1.0.0' });
 });
 
 http.api.listen(API_PORT, function () {
