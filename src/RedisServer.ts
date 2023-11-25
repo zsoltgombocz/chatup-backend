@@ -19,11 +19,11 @@ export class RedisServer implements RedisInterface {
         return RedisServer.instance;
     }
 
-    static establishConnection = (host: string, port: number, password: string): void => {
+    static establishConnection = (url: string): void => {
 
         if (RedisServer.instance) return;
 
-        const client = new Redis({ host, port, password, retryStrategy: null });
+        const client = new Redis(url);
 
         RedisServer.instance = client;
     }

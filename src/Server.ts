@@ -39,13 +39,9 @@ export class SocketServer implements ServerInterface {
         const enabledCleanup = parseInt(process.env.ENABLE_CLEANUP) || 0;
         if (enabledCleanup) this.#startCleanup(2);
 
-        RedisServer.establishConnection(
-            process.env.REDIS_HOST,
-            6379,
-            process.env.REDIS_PW
-        );
+        RedisServer.establishConnection(process.env.REDIS_URL);
 
-        RedisServer.getInstance().on('error', (err) => {
+        RedisServer.getInstance()?.on('error', (err) => {
             console.log('Error connecting to Redis:', err);
             console.log('Shutting down...');
             process.exit(-1);
