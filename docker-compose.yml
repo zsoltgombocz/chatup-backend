@@ -1,0 +1,27 @@
+version: '3.9'
+
+services:
+  redis:
+    container_name: chatup-redis-db
+    image: redis:latest
+    restart: unless-stopped
+    volumes:
+      - redis:/data
+
+  app:
+    container_name: chatup-backend
+    build: .
+    ports: 
+      - 4000:4000 # API
+      - 4001:4001 # SOCKER
+    environment:
+      SOCKET_PORT: 4001
+      API_PORT: 4000
+      REDIS_URL: redis://redis:6379
+      ENV: 'production'
+      ENABLE_CLEANUP: '1'
+    depends_on:
+      - redis
+
+volumes:
+  redis: {}
