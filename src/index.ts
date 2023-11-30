@@ -1,6 +1,7 @@
 import express from "express";
 import chatRoutes from "./routes/chatRoutes";
 import bodyParser from "body-parser";
+import { ServerInterface, SocketServer } from "./Server";
 
 require('dotenv').config();
 
@@ -27,6 +28,9 @@ apps.api.use('/chat', chatRoutes);
 apps.api.get("/", (req: any, res: any) => {
     res.json({ message: 'ChatUp API v1.0.0' });
 });
+
+//!Create socket server
+new SocketServer(http.socket);
 
 http.api.listen(API_PORT, function () {
     console.log(`API listening on ${API_PORT}`);

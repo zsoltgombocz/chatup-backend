@@ -46,6 +46,8 @@ export class SocketServer implements ServerInterface {
             console.log('Shutting down...');
             process.exit(-1);
         });
+
+        RedisServer.getInstance()?.on('connect', () => console.log('Connected to Redis!'));
     }
 
     #startCleanup = (minutes: number = 5): void => {
