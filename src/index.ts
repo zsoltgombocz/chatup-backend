@@ -1,7 +1,8 @@
 import express from "express";
 import chatRoutes from "./routes/chatRoutes";
 import bodyParser from "body-parser";
-import { ServerInterface, SocketServer } from "./Server";
+import { SocketServer } from "./Server";
+import cors from 'cors';
 
 require('dotenv').config();
 
@@ -15,6 +16,14 @@ const apps = {
 
 apps.api.set("port", API_PORT);
 apps.socket.set("port", SOCKET_PORT);
+
+apps.socket.use(
+    cors({ origin: process.env.ENV === 'development' ? '*' : ['https://dev.chatup.hu'] })
+);
+
+apps.api.use(
+    cors({ origin: process.env.ENV === 'development' ? '*' : ['https://dev.chatup.hu'] })
+);
 
 let http = {
     api: require("http").Server(apps.api),
