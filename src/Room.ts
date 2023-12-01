@@ -132,7 +132,7 @@ export class Room implements RoomInterface {
     addMessage = (user: User, message: string, isNeutral = false): Promise<boolean> => {
         return new Promise<boolean>(async (resolve, reject) => {
             const room: SingleRoomInterface | undefined = this.getRoomById(user.getRoomId().current);
-            console.log(message);
+
             if (room === undefined || message.length === 0) reject(false);
 
             try {
